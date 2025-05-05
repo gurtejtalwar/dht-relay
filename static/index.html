@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Sensor Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+      max-width: 400px;
+      margin: auto;
+    }
+    h2 { text-align: center; }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    .value-display {
+      float: right;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>ESP32 Sensor Dashboard</h2>
+
+  <div class="card">
+    <h3>Sensor Readings</h3>
+    <p><strong>Temperature:</strong> <span id="temperature">--</span> °F</p>
+    <p><strong>Humidity:</strong> <span id="humidity">--</span> %</p>
+  </div>
+
+  <div class="card">
+    <h3>Controls</h3>
+    <label>
+      Master Switch:
+      <input type="checkbox" id="masterSwitch">
+    </label>
+
+    <label>
+      Temp Cutoff (°F):
+      <span class="value-display" id="tempVal">75</span>
+      <input type="range" id="tempSlider" min="60" max="100" value="75">
+    </label>
+
+    <label>
+      Humidity Cutoff (%):
+      <span class="value-display" id="humidityVal">20</span>
+      <input type="range" id="humiditySlider" min="10" max="80" value="20">
+    </label>
+    <button onclick="updateSettings()">Save Settings</button>
+  </div>
+
+  <script>
+    const apiUrl = 'http://localhost:8000/api'; // Change if hosted elsewhere
+
+    async function fetchStatus() {
+      const res = await fetch(`${apiUrl}/status`);
+      const data = await res.json();
+
+      document.getElementById('temperature').innerText = data.temperature.toFixed(2);
+      document.getElementById('humidity').innerText = data.humidity.toFixed(2);
+      document.getElementById('masterSwitch').checked = data.masterSwitch;
+      document.getElementById('tempSlider').value = data.tempCutoff;
+      document.getElementById('tempVal').innerText = data.tempCutoff;
+      document.getElementById('humiditySlider').value = data.humidityCutoff;
+      document.getElementById('humidityVal').innerText = data.humidityCutoff;
+    }
+
+    async function updateSettings() {
+      const payload = {
+        masterSwitch: document.getElementById('masterSwitch').checked,
+        tempCutoff: parseFloat(document.getElementById('tempSlider').value),
+        humidityCutoff: parseFloat(document.getElementById('humiditySlider').value)
+      };
+
+      const res = await fetch(`${apiUrl}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) alert("Settings updated!");
+      else alert("Failed to update.");
+    }
+
+    // Update labels when sliders move
+    document.getElementById('tempSlider').oninput = (e) => {
+      document.getElementById('tempVal').innerText = e.target.value;
+    };
+    document.getElementById('humiditySlider').oninput = (e) => {
+      document.getElementById('humidityVal').innerText = e.target.value;
+    };
+
+    // Initial load
+    fetchStatus();
+    setInterval(fetchStatus, 5000); // Update every 5 sec
+  </script>
+
+</body>
+</html>
